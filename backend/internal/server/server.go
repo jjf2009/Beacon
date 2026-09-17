@@ -9,14 +9,15 @@ import (
 
 func New(addr string) *http.Server {
 	router := http.NewServeMux()
+	service :=project.NewService()
 
 	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	router.HandleFunc("GET /api/projects", project.List())
-	router.HandleFunc("POST /api/projects", project.Create())
+	router.HandleFunc("GET /api/projects", project.List(service))
+	router.HandleFunc("POST /api/projects", project.Create(service))
 
 	return &http.Server{
 		Addr:         addr,
