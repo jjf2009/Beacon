@@ -2,7 +2,6 @@ package response
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -11,19 +10,18 @@ import (
 
 type Response struct {
 	Status string `json:"status"`
-	Error  string `json:"error"`
+	Error  string `json:"error,omitempty"`
 }
 
 const (
-	StatusOK    = "OK"
-	StatusError = "Error"
+	StatusOK    = "ok"
+	StatusError = "error"
 )
 
-func WriteJson(w http.ResponseWriter, status int, data interface{}) error {
+func WriteJson(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-
-	return json.NewEncoder(w).Encode(data)
+	json.NewEncoder(w).Encode(data)
 }
 
 func GeneralError(err error) Response {
@@ -34,20 +32,17 @@ func GeneralError(err error) Response {
 }
 
 func ValidationError(errs validator.ValidationErrors) Response {
-	var errMsgs []string
-
-	for _, err := range errs {
-		switch err.ActualTag() {
+	var msgs []string
+	for _, e := range errs {
+		switch e.ActualTag() {
 		case "required":
-			errMsgs = append(errMsgs, fmt.Sprintf("field %s is required field", err.Field()))
-
+			msgs = append(msgs, e.Field()+" is required")
 		default:
-			errMsgs = append(errMsgs, fmt.Sprintf("field %s is invalid", err.Field()))
+			msgs = append(msgs, e.Field()+" is invalid")
 		}
 	}
-
 	return Response{
 		Status: StatusError,
-		Error:  strings.Join(errMsgs, ","),
+		Error:  strings.Join(msgs, ", "),
 	}
 }
