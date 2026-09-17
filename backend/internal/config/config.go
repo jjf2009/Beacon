@@ -13,12 +13,21 @@ import (
 type HTTPServer struct {
 	Addr string `yaml:"address"`
 }
+type Database struct {
+    Host     string `yaml:"host" env:"DB_HOST"`
+    Port     int    `yaml:"port" env:"DB_PORT"`
+    User     string `yaml:"user" env:"DB_USER"`
+    Password string `yaml:"password" env:"DB_PASSWORD"`
+    Name     string `yaml:"name" env:"DB_NAME"`
+}
+
 
 // env-default:"production"
 
 type Config struct {
 	Env string `yaml:"env" env:"ENV" env-required:"true" `
 	HTTPServer `yaml:"http_server"`
+	Database   `yaml:"database"`
 }
 
 func MustLoad() *Config{
