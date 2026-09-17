@@ -1,13 +1,14 @@
 package server
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
 	"github.com/jjf2009/beacon/backend/internal/project"
 )
 
-func New(addr string) *http.Server {
+func New(addr string, db *sql.DB) *http.Server {
 	router := http.NewServeMux()
 	service :=project.NewService()
 

@@ -11,13 +11,20 @@ import (
 	"time"
 
 	"github.com/jjf2009/beacon/backend/internal/config"
+	"github.com/jjf2009/beacon/backend/internal/database"
 	"github.com/jjf2009/beacon/backend/internal/server"
 )
 
 func main() {
 	cfg := config.MustLoad()
+	db, err := database.New(cfg)
+    if err != nil {
+    slog.Error("failed to connect to database", "error", err)
+    os.Exit(1)
+   }
+   defer db.Close()
 
-	srv := server.New(cfg.HTTPServer.Addr)
+	srv := server.New(cfg.HTTPServer.Addr,db)
 
 	slog.Info("server started", "addr", cfg.HTTPServer.Addr)
 
