@@ -1,22 +1,18 @@
 package project
 
-import "time"
 
 type Service struct {
-    // empty for now — Module 1 adds db *sql.DB here
+    repo *Repository   // ← add this
 }
 
-func NewService() *Service {
-    return &Service{}
+func NewService(repo *Repository) *Service {   // ← accept repo
+    return &Service{repo: repo}
 }
 
 func (s *Service) Create(name string) (Project, error) {
-		project := Project{
-			ID:        "1",
-			Name:      name,
-			CreatedAt: time.Now(),
-		}
-
-		return project,nil
+    return s.repo.Create(name)   // ← delegate to repo
 }
-	
+
+func (s *Service) List() ([]Project, error) {
+    return s.repo.List()   // ← add this
+}
