@@ -1,6 +1,6 @@
 # Module 0 — Go Backend Foundation
 
-## Status: NOT STARTED
+## Status: DONE
 
 ## What You're Building
 
