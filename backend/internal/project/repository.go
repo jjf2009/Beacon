@@ -2,8 +2,9 @@ package project
 
 import (
 	"database/sql"
-	"fmt"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Repository struct {
@@ -15,7 +16,7 @@ func NewRepository(db *sql.DB) *Repository {
 }
 
 func (r *Repository) List() ([]Project, error){
-	query := `SELECT id, name, created_at FROM projects`
+	query := `SELECT id::text, name, created_at FROM projects`
 	rows , err :=  r.db.Query(query)
 
 	if err!= nil {
@@ -41,12 +42,12 @@ func (r *Repository) List() ([]Project, error){
 }
 
 func (r *Repository) Create(name string) (Project, error){
-    query := `INSERT INTO projects (id, name, created_at) VALUES ($1, $2, $3) RETURNING id, name, created_at`
+    query := `INSERT INTO projects (id, name, created_at) VALUES ($1, $2, $3) RETURNING id::text, name, created_at`
 
-id := fmt.Sprintf("%d", time.Now().UnixNano())
+	id := uuid.New().String()
 
-var p Project
-err := r.db.QueryRow(query, id, name, time.Now()).Scan(&p.ID, &p.Name, &p.CreatedAt)
+	var p Project
+	err := r.db.QueryRow(query, id, name, time.Now()).Scan(&p.ID, &p.Name, &p.CreatedAt)
 if err != nil {
     return Project{}, err
 }

@@ -10,7 +10,8 @@ import (
 
 func New(addr string, db *sql.DB) *http.Server {
 	router := http.NewServeMux()
-	service :=project.NewService()
+	repo :=project.NewRepository(db);
+	service :=project.NewService(repo)
 
 	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 
-
 	"github.com/go-playground/validator/v10"
 	"github.com/jjf2009/beacon/backend/internal/utils/response"
 )
@@ -15,11 +14,17 @@ type CreateRequest struct {
 }
 
 func List(svc *Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		projects := []Project{} // empty slice — encodes to [] not null
-		response.WriteJson(w, http.StatusOK, projects)
-	}
+    return func(w http.ResponseWriter, r *http.Request) {
+        projects, err := svc.List()
+        if err != nil {
+            slog.Error("error listing projects", "error", err)
+            response.WriteJson(w, http.StatusInternalServerError, response.GeneralError(err))
+            return
+        }
+        response.WriteJson(w, http.StatusOK, projects)
+    }
 }
+
 
 func Create(svc *Service) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
