@@ -1,6 +1,6 @@
 # Module 1 — PostgreSQL & Data Modelling
 
-## Status: NOT STARTED
+## Status: DONE
 
 ## What You're Building
 

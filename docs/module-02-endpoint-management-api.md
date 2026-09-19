@@ -1,6 +1,6 @@
 # Module 2 — Endpoint Management API
 
-## Status: NOT STARTED
+## Status: DONE
 
 ## What You're Building
 
