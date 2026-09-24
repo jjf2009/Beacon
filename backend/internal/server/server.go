@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jjf2009/beacon/backend/internal/checker"
 	"github.com/jjf2009/beacon/backend/internal/endpoint"
 	"github.com/jjf2009/beacon/backend/internal/project"
 )
@@ -27,7 +28,8 @@ func New(addr string, db *sql.DB) *http.Server {
 	router.HandleFunc("GET /api/endpoints",endpoint.List(eservice))
     router.HandleFunc("GET /api/endpoints/{id}", endpoint.GetById(eservice))
     router.HandleFunc("DELETE /api/endpoints/{id}", endpoint.Delete(eservice))
-
+	router.HandleFunc("POST /api/check/{id}/check",checker.SaveCheck())
+	router.HandleFunc("GET /api/check/{id}/checks",checker.ListByEndpoint())
 
 	return &http.Server{
 		Addr:         addr,
