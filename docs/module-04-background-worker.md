@@ -1,6 +1,6 @@
 # Module 4 — Background Worker
 
-## Status: NOT STARTED
+## Status: Done
 
 ## What You're Building
 
