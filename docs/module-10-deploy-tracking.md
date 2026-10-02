@@ -26,16 +26,17 @@ This is the feature that makes Beacon more than a ping monitor.
 
 ## Data Model
 
-### deployments table
-```sql
-id          UUID PRIMARY KEY
-project_id  UUID REFERENCES projects(id)
-version     TEXT NOT NULL      -- "219", "v1.4.2", "abc123"
-commit      TEXT               -- git commit SHA
-environment TEXT DEFAULT 'production'
-deployed_at TIMESTAMPTZ DEFAULT NOW()
-deployed_by TEXT               -- who triggered it
-```
+**Exercise: the `deployments` migration.** Write the `CREATE TABLE`. It needs:
+
+- a UUID primary key
+- a `project_id` UUID referencing `projects(id)`
+- a `version` text column, not null (e.g. "219", "v1.4.2")
+- a `commit` text column (git SHA)
+- an `environment` text column defaulting to `'production'`
+- a `deployed_at` timestamp defaulting to now
+- a `deployed_by` text column
+
+Question to answer as you write it: why `TIMESTAMPTZ` and not `TEXT` for `deployed_at`?
 
 ## New API Endpoint
 
@@ -76,21 +77,11 @@ In your existing project's `.github/workflows/deploy.yml`:
 
 ## Incident Correlation Query
 
-When viewing an incident, find the most recent deploy before incident start:
+When viewing an incident, find the most recent deploy before incident start.
 
-```sql
-SELECT * FROM deployments
-WHERE project_id = $1
-  AND deployed_at < $2  -- before incident started_at
-ORDER BY deployed_at DESC
-LIMIT 1
-```
+**Exercise: the correlation query.** Write SQL that returns the single most recent deployment for a project (`$1`) whose `deployed_at` is *before* the incident's start time (`$2`). Hint: filter with `deployed_at < $2`, order newest-first, limit to one. (Also: name the columns explicitly instead of `SELECT *` — the habit you learned earlier.)
 
-Compute time delta:
-```go
-delta := incident.StartedAt.Sub(deploy.DeployedAt)
-// "Incident started 4m32s after deploy #219"
-```
+**Exercise: the time delta.** Given the incident and the deploy, compute how long after the deploy the incident started. Go's `time.Time` has a method that subtracts one time from another and returns a `time.Duration` — which method? The result prints as something like "4m32s".
 
 ## Dashboard Updates
 
@@ -123,20 +114,14 @@ backend/
 
 ## API Key Middleware
 
-Simple token check for deployment endpoint:
+**Exercise: `requireAPIKey`.** Middleware is a function that wraps a handler and returns a new handler. Write one that takes an `http.Handler` (call it `next`) and returns an `http.Handler`. In English:
 
-```go
-func requireAPIKey(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        key := r.Header.Get("Authorization")
-        if key != "Bearer "+os.Getenv("BEACON_API_KEY") {
-            http.Error(w, "unauthorized", http.StatusUnauthorized)
-            return
-        }
-        next.ServeHTTP(w, r)
-    })
-}
-```
+1. Return an `http.HandlerFunc` (which adapts a function into a Handler).
+2. Inside it, read the `Authorization` header from the request.
+3. If it does not equal `"Bearer "` plus your `BEACON_API_KEY` env var, write a 401 (`http.Error` with `http.StatusUnauthorized`) and `return` — don't fall through.
+4. Otherwise call `next.ServeHTTP(w, r)` to pass control to the real handler.
+
+The shape — "function that takes a handler and returns a handler" — is the middleware pattern. Understand it once and you can write logging, auth, and rate-limit middleware the same way.
 
 ## Definition of Done
 

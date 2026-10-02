@@ -39,47 +39,18 @@ beacon_worker_jobs_failed_total        counter    queue jobs failed
 
 ## Go Implementation
 
-Use official `prometheus/client_golang` library:
+Use the official `prometheus/client_golang` library (import `prometheus` and `promhttp`). Read the library's docs — this is real DevOps skill: reading a library's API and wiring it in.
 
-```go
-import "github.com/prometheus/client_golang/prometheus"
-import "github.com/prometheus/client_golang/prometheus/promhttp"
+**Exercise: define the metrics.** As package-level variables:
 
-var checksTotal = prometheus.NewCounterVec(
-    prometheus.CounterOpts{
-        Name: "beacon_checks_total",
-        Help: "Total number of endpoint checks",
-    },
-    []string{"status"},
-)
+1. A counter *vector* named `beacon_checks_total` with a label `"status"` (so you can count up vs down separately). Look up `prometheus.NewCounterVec` and `CounterOpts`.
+2. A histogram named `beacon_check_duration_ms` with sensible buckets (e.g. 10, 50, 100, 200, 500, 1000, 5000 ms). Look up `prometheus.NewHistogram` and `HistogramOpts`.
 
-var checkDuration = prometheus.NewHistogram(
-    prometheus.HistogramOpts{
-        Name:    "beacon_check_duration_ms",
-        Help:    "Check response time in milliseconds",
-        Buckets: []float64{10, 50, 100, 200, 500, 1000, 5000},
-    },
-)
+**Exercise: register them.** Write an `init()` function that registers both metrics with Prometheus (`prometheus.MustRegister`). Why `init()`? What does Go do with it automatically?
 
-func init() {
-    prometheus.MustRegister(checksTotal, checkDuration)
-}
-```
+**Exercise: expose `/metrics`.** Add one route to your mux that serves the Prometheus handler (`promhttp.Handler()`).
 
-Expose endpoint:
-```go
-mux.Handle("/metrics", promhttp.Handler())
-```
-
-Instrument checker:
-```go
-func CheckEndpoint(url string) CheckResult {
-    result := doCheck(url)
-    checksTotal.WithLabelValues(result.Status).Inc()
-    checkDuration.Observe(float64(result.ResponseTime))
-    return result
-}
-```
+**Exercise: instrument the checker.** After a check runs, increment the counter for the result's status (`.WithLabelValues(status).Inc()`) and record the duration in the histogram (`.Observe(...)` — note it wants a `float64`, so convert). Where in your existing checker code does this go?
 
 ## Prometheus Config
 

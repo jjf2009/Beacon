@@ -33,53 +33,44 @@ Endpoint B (interval=30)  → ticker fires every 30s → check B
 Endpoint C (interval=10)  → ticker fires every 10s → check C
 ```
 
-## Scheduler Design
+## Scheduler Design — write it yourself
 
-```go
-type Scheduler struct {
-    jobs map[string]*Job  // endpoint ID → job
-    db   *sql.DB
-}
+### Exercise 1: the two structs
 
-type Job struct {
-    endpoint Endpoint
-    ticker   *time.Ticker
-    stop     chan struct{}
-}
-```
+Define a `Scheduler` struct with:
+- a field `jobs` that maps an endpoint ID (string) to a pointer-to-Job
+- a field `checkRepo` that holds a pointer to the check package's Repository (the scheduler needs it to save results)
 
-### Start a job
-```go
-func (s *Scheduler) AddJob(endpoint Endpoint) {
-    ticker := time.NewTicker(time.Duration(endpoint.Interval) * time.Second)
-    stop := make(chan struct{})
-    
-    go func() {
-        for {
-            select {
-            case <-ticker.C:
-                result := checker.Check(endpoint.URL)
-                repo.SaveCheck(endpoint.ID, result)
-            case <-stop:
-                ticker.Stop()
-                return
-            }
-        }
-    }()
-    
-    s.jobs[endpoint.ID] = &Job{endpoint, ticker, stop}
-}
-```
+Define a `Job` struct with:
+- a field holding the endpoint (type `endpoint.Endpoint`)
+- a field holding a pointer to a `time.Ticker`
+- a field `stop` that is a channel carrying an empty struct (a pure signal, no data)
 
-### Stop a job
-```go
-func (s *Scheduler) RemoveJob(id string) {
-    if job, ok := s.jobs[id]; ok {
-        close(job.stop)
-        delete(s.jobs, id)
-    }
-}
-```
+Hints: map type syntax is `map[KeyType]ValueType`. An empty-struct channel is `chan struct{}`.
+
+### Exercise 2: a constructor
+
+Write a function `New` that takes a `*check.Repository` and returns a `*Scheduler`.
+- Inside, build and return the address of a Scheduler whose `jobs` map is initialized (a nil map can't be written to — you must `make` it) and whose `checkRepo` is the one passed in.
+
+### Exercise 3: AddJob
+
+Write a method named `AddJob` on `*Scheduler` that takes one `endpoint.Endpoint` parameter (name it `ep`). Line by line, write Go that:
+
+1. Creates a ticker that fires every `ep.Interval` seconds. (`time.NewTicker` wants a `time.Duration`, but `ep.Interval` is an `int` — you must convert it, then multiply by `time.Second`.)
+2. Creates a `stop` channel that carries an empty struct.
+3. Starts a **background goroutine** that loops forever. Inside the loop, wait on two channels at once (which keyword lets you wait on multiple channels?):
+   - when the ticker's channel delivers a value: check `ep.URL`, then save the result using the scheduler's check repository, keyed by `ep.ID`
+   - when the `stop` channel delivers: stop the ticker, then exit the goroutine
+4. After the goroutine, store a pointer to a new `Job` (holding `ep`, the ticker, and the stop channel — use named fields) in the `jobs` map under key `ep.ID`.
+
+### Exercise 4: RemoveJob
+
+Write a method `RemoveJob` on `*Scheduler` that takes an `id string`. It should:
+1. Look up the job in the map, using the comma-ok form to check it exists (`value, ok := m[key]`).
+2. If it exists: close its `stop` channel (this wakes the goroutine's stop case), then delete the entry from the map with the builtin `delete`.
+
+When you've written all four, ask me to check.
 
 ## Dynamic Job Management
 

@@ -75,28 +75,17 @@ ms
 For now: poll every 30s with `setInterval`. Good enough.
 Real-time (WebSockets) comes much later — don't add it now.
 
-```typescript
-useEffect(() => {
-    fetchEndpoints()
-    const interval = setInterval(fetchEndpoints, 30_000)
-    return () => clearInterval(interval)  // cleanup on unmount
-}, [])
-```
+**Exercise: the polling hook.** Write a React `useEffect` that runs once on mount and:
+
+1. Fetches endpoints immediately.
+2. Sets up a repeating fetch every 30 seconds (which browser function repeats on an interval?).
+3. Returns a cleanup function that cancels the interval when the component unmounts (what pairs with `setInterval`?). What goes in the dependency array so this runs only once?
 
 ## Uptime Calculation (backend)
 
-```sql
-SELECT
-    COUNT(*) as total,
-    COUNT(*) FILTER (WHERE status = 'up') as up_count
-FROM checks
-WHERE endpoint_id = $1
-  AND checked_at > NOW() - INTERVAL '24 hours'
-```
+**Exercise: the SQL.** Write one query against the `checks` table that, for a given `endpoint_id` (a `$1` parameter) and only rows from the last 24 hours, returns two numbers: the total count of checks, and the count where `status = 'up'`. Hints: `COUNT(*)`, the `FILTER (WHERE ...)` clause, and `NOW() - INTERVAL '24 hours'` for the time window.
 
-```go
-uptime := float64(upCount) / float64(total) * 100
-```
+**Exercise: the Go.** Given `upCount` and `total` as integers, write the one line that computes uptime as a percentage. Watch the type: integer division truncates — what must you convert to before dividing?
 
 ## Definition of Done
 

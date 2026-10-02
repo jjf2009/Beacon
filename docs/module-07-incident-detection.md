@@ -42,52 +42,32 @@ Start simple. You can make rules configurable later.
 
 ## Data Model
 
-### incidents table
-```sql
-id            UUID PRIMARY KEY
-endpoint_id   UUID REFERENCES endpoints(id)
-status        TEXT NOT NULL  -- 'open' | 'investigating' | 'resolved'
-started_at    TIMESTAMPTZ DEFAULT NOW()
-resolved_at   TIMESTAMPTZ
-```
+**Exercise: the `incidents` migration.** Write the `CREATE TABLE` yourself. The table needs:
+
+- a UUID primary key
+- an `endpoint_id` UUID that references `endpoints(id)`
+- a `status` text column, not null (values: `'open'`, `'investigating'`, `'resolved'`)
+- a `started_at` timestamp that defaults to now
+- a `resolved_at` timestamp that is nullable (an open incident has no resolve time yet)
+
+Model it on your earlier migrations. What column type did you use for the other timestamps?
 
 ## Detection Logic (runs after every check)
 
-```go
-func (s *IncidentService) EvaluateAfterCheck(endpointID string, result CheckResult) error {
-    if result.Status == "down" {
-        consecutiveFails := repo.CountConsecutiveFails(endpointID)
-        if consecutiveFails >= 3 {
-            existing := repo.GetOpenIncident(endpointID)
-            if existing == nil {
-                repo.CreateIncident(endpointID)  // don't duplicate
-            }
-        }
-    }
+**Exercise: `EvaluateAfterCheck`.** Write a method on the incident service that takes an `endpointID string` and a check result, and returns an `error`. In plain English, the logic is:
 
-    if result.Status == "up" {
-        existing := repo.GetOpenIncident(endpointID)
-        if existing != nil {
-            repo.ResolveIncident(existing.ID)
-        }
-    }
-    return nil
-}
-```
+- If the check status is `"down"`:
+  - Count how many of the most recent checks failed in a row (a repo method).
+  - If that count is at least 3, look up whether an open incident already exists for this endpoint.
+  - Only create a new incident if there isn't one already (this is deduplication — don't open a second incident for the same outage).
+- If the check status is `"up"`:
+  - Look up any open incident for this endpoint, and if one exists, resolve it.
+
+Think about: how do you represent "no open incident found"? What does a repo method return when nothing matches?
 
 ## Consecutive Failures Query
 
-```sql
-SELECT COUNT(*) FROM (
-    SELECT status FROM checks
-    WHERE endpoint_id = $1
-    ORDER BY checked_at DESC
-    LIMIT 3
-) recent
-WHERE status = 'down'
-```
-
-If count = 3, all three most recent checks failed.
+**Exercise: the query.** Write SQL that counts how many of the **3 most recent** checks for a given `endpoint_id` have status `'down'`. Hint: you need a subquery — first select the last 3 checks (`ORDER BY checked_at DESC LIMIT 3`), then count the down ones in the outer query. If the count is 3, all three most recent failed.
 
 ## New API Endpoints
 

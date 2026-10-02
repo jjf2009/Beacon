@@ -59,36 +59,20 @@ api:
 
 ### 3. Graceful Shutdown
 
-Handle SIGTERM — finish in-flight requests before exiting:
+Handle SIGTERM — finish in-flight requests before exiting. You already did most of this in your `main.go`. As an exercise, reconstruct it from memory:
 
-```go
-server := &http.Server{Addr: ":8080", Handler: mux}
+1. Run `server.ListenAndServe()` in a goroutine (it blocks — you don't want it blocking main). Treat `http.ErrServerClosed` as normal, not an error.
+2. Block on `<-ctx.Done()` (the signal context you built with `signal.NotifyContext`).
+3. Once cancelled, make a new context with a timeout (say 30s) so shutdown can't hang forever.
+4. Call `server.Shutdown(shutdownCtx)` — it stops accepting new requests and waits for in-flight ones to finish.
 
-go func() {
-    if err := server.ListenAndServe(); err != http.ErrServerClosed {
-        log.Fatal(err)
-    }
-}()
-
-<-ctx.Done()
-shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-defer cancel()
-server.Shutdown(shutdownCtx)
-```
+Question: what happens to a request that's mid-flight if you skip step 4 and just `os.Exit`?
 
 ### 4. Structured Logging
 
-Replace `fmt.Println` with structured logs (JSON):
+Replace `fmt.Println` with structured logs (JSON) using `log/slog`. You've been doing this already.
 
-```go
-import "log/slog"
-
-slog.Info("check completed",
-    "endpoint_id", id,
-    "status", result.Status,
-    "latency_ms", result.ResponseTime,
-)
-```
+**Exercise:** write a `slog.Info` call that logs "check completed" with three key/value fields: the endpoint ID, the status, and the latency. Recall the pattern: `slog.Info(message, key1, val1, key2, val2, ...)` — pairs of key then value.
 
 Output:
 ```json
@@ -101,26 +85,7 @@ Machine-parseable. Log aggregation systems (Loki, Datadog) can query by field.
 
 All config from environment variables. No hardcoded values. No config files checked into git.
 
-```go
-type Config struct {
-    DBHost     string
-    DBPort     int
-    DBName     string
-    DBUser     string
-    DBPassword string
-    RedisURL   string
-    Port       int
-    APIKey     string
-}
-
-func Load() Config {
-    return Config{
-        DBHost:     getEnv("DB_HOST", "localhost"),
-        DBPort:     getEnvInt("DB_PORT", 5432),
-        // ...
-    }
-}
-```
+**Exercise:** you already have a `Config` struct and loader. Extend it for production. Add fields for anything still hardcoded (Redis URL, API key, etc.). Write two small helpers — `getEnv(key, fallback string) string` and `getEnvInt(key string, fallback int) int` — that read an env var and return a default when it's unset. In `Load`, build the `Config` from those helpers. Think: why default values? What should happen if a *required* secret like the DB password is missing — default, or crash loudly?
 
 ### 6. Secrets Management
 
@@ -180,36 +145,15 @@ migrate -path ./migrations -database $DATABASE_URL up
 
 ### 9. Rate Limiting
 
-Protect API from abuse:
+Protect API from abuse.
 
-```go
-// Simple: use golang.org/x/time/rate
-limiter := rate.NewLimiter(rate.Every(time.Second), 10)  // 10 req/s
-
-func rateLimitMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        if !limiter.Allow() {
-            http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
-            return
-        }
-        next.ServeHTTP(w, r)
-    })
-}
-```
+**Exercise:** use `golang.org/x/time/rate`. Create a limiter that allows ~10 requests/second (`rate.NewLimiter`). Then write `rateLimitMiddleware` — same middleware shape you learned in Module 10 (takes an `http.Handler`, returns one). Inside the wrapped handler: if `limiter.Allow()` returns false, respond with 429 (`http.StatusTooManyRequests`) and `return`; otherwise call `next.ServeHTTP`. This is the middleware pattern again — once you know it, every cross-cutting concern (auth, logging, rate limiting) follows the same shape.
 
 ### 10. Integration Tests
 
 Test the full stack: API + real database. Not unit tests with mocks.
 
-```go
-func TestCreateEndpoint(t *testing.T) {
-    // Start test DB (testcontainers or pre-seeded)
-    // Run migrations
-    // Call POST /api/endpoints
-    // Assert row in DB
-    // Assert response
-}
-```
+**Exercise:** write `TestCreateEndpoint(t *testing.T)`. A Go test is a function starting with `Test`, taking `*testing.T`. The steps: start a test DB (testcontainers, or a pre-seeded local one), run migrations, call `POST /api/endpoints`, then assert both that the response is correct and that a row actually landed in the DB. Use `t.Fatalf` when a check fails. Learning to write a real test is a hiring signal on its own — many juniors can't.
 
 ## Production Deployment Options
 

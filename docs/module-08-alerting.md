@@ -29,33 +29,14 @@ When incident is created, notify someone. Start with one channel: Discord or Ema
 
 ## Discord Webhook Payload
 
-```go
-type DiscordMessage struct {
-    Content string `json:"content"`
-    Embeds  []DiscordEmbed `json:"embeds"`
-}
+**Exercise: the payload structs.** Discord expects a JSON body with a `content` string and an `embeds` array. Each embed has a `title`, `description`, and `color` (an int — red is `16711680`). Define two Go structs (`DiscordMessage` and `DiscordEmbed`) with the right fields and `json:"..."` tags so they marshal to that shape. Look at how you tagged structs in earlier modules.
 
-type DiscordEmbed struct {
-    Title       string `json:"title"`
-    Description string `json:"description"`
-    Color       int    `json:"color"`  // red=16711680
-}
-```
+**Exercise: `SendAlert`.** Write a function that takes a webhook URL, an incident, and an endpoint, and returns an `error`. In English:
 
-```go
-func SendAlert(webhookURL string, incident Incident, endpoint Endpoint) error {
-    msg := DiscordMessage{
-        Embeds: []DiscordEmbed{{
-            Title:       "🔴 Incident Detected",
-            Description: fmt.Sprintf("**%s** is DOWN\nIncident started: %s", endpoint.Name, incident.StartedAt),
-            Color:       16711680,
-        }},
-    }
-    body, _ := json.Marshal(msg)
-    _, err := http.Post(webhookURL, "application/json", bytes.NewReader(body))
-    return err
-}
-```
+1. Build a `DiscordMessage` with one embed — a title like "Incident Detected", a description naming the endpoint and start time (which package formats a string with values?), and the red color int.
+2. Marshal it to JSON bytes (`encoding/json`).
+3. POST those bytes to the webhook URL with content type `application/json` (`http.Post` wants an `io.Reader` — how do you turn a byte slice into one?).
+4. Return the error.
 
 ## Alert Rules (avoid spam)
 
@@ -63,37 +44,24 @@ func SendAlert(webhookURL string, incident Incident, endpoint Endpoint) error {
 - Alert once when incident RESOLVES
 - Do NOT alert on every failed check
 
-```go
-// In incident service:
-if incidentJustCreated {
-    go alerter.SendAlert(incident, endpoint)  // async, don't block
-}
-```
+**Exercise: fire the alert without blocking.** In the incident service, when an incident is *just created*, call the alerter — but in a way that does not block the check loop while the HTTP POST to Discord happens. Which keyword runs a call in the background?
 
 ## Retry Logic
 
-If Discord webhook fails, retry up to 3 times with backoff:
+If Discord webhook fails, retry up to 3 times with backoff.
 
-```go
-func sendWithRetry(fn func() error, maxAttempts int) error {
-    for i := 0; i < maxAttempts; i++ {
-        err := fn()
-        if err == nil {
-            return nil
-        }
-        time.Sleep(time.Duration(i+1) * 2 * time.Second)  // 2s, 4s, 6s
-    }
-    return fmt.Errorf("alert failed after %d attempts", maxAttempts)
-}
-```
+**Exercise: `sendWithRetry`.** Write a helper that takes a function (`func() error`) and a max-attempts count, and returns an `error`. In English:
+
+1. Loop up to `maxAttempts` times.
+2. Call the function each time; if it returns no error, return `nil` immediately (success).
+3. If it failed, sleep for a growing delay before the next try (2s, then 4s, then 6s — how do you compute that from the loop index? remember `time.Sleep` wants a `time.Duration`).
+4. If all attempts fail, return an error saying so.
+
+This is a **higher-order function** — it takes another function as an argument. That's the pattern that makes retry reusable for any operation.
 
 ## Config
 
-Store webhook URL in environment variable, not hardcoded.
-
-```bash
-DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
-```
+Store webhook URL in an environment variable, not hardcoded (e.g. a `DISCORD_WEBHOOK_URL` var). Read it the same way your config already reads other env values.
 
 ## File Structure Target
 
@@ -105,14 +73,7 @@ backend/
       discord.go     ← Discord webhook impl
 ```
 
-Define an interface so you can add Email later without changing incident service:
-
-```go
-type Alerter interface {
-    SendIncidentAlert(incident Incident, endpoint Endpoint) error
-    SendResolvedAlert(incident Incident, endpoint Endpoint) error
-}
-```
+**Exercise: the `Alerter` interface.** Define an interface so you can add Email later without changing the incident service. It should declare two methods — one for sending an incident (opened) alert and one for a resolved alert — each taking an incident and an endpoint and returning an `error`. Recall Go interface syntax: `type Name interface { MethodName(args) returnType }`. The incident service depends on this interface, not on Discord directly — that's how you swap implementations later.
 
 ## Definition of Done
 

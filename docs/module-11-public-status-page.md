@@ -82,22 +82,19 @@ Public status page can get many requests. Don't query DB every time.
 
 Simple cache: store computed status in memory, expire every 30s.
 
-```go
-type StatusCache struct {
-    mu        sync.Mutex
-    data      *PublicStatus
-    expiresAt time.Time
-}
+**Exercise: `StatusCache`.** Because many requests hit this concurrently (many goroutines), the cache must be safe for concurrent access. Define a struct with:
 
-func (c *StatusCache) Get() (*PublicStatus, bool) {
-    c.mu.Lock()
-    defer c.mu.Unlock()
-    if time.Now().Before(c.expiresAt) {
-        return c.data, true
-    }
-    return nil, false
-}
-```
+- a `sync.Mutex` (locks access so two goroutines don't read/write at once)
+- a pointer to the cached status
+- an `expiresAt` time
+
+Then write a `Get` method (on a pointer receiver) that returns the cached status and a bool. In English:
+
+1. Lock the mutex, and `defer` the unlock (so it always unlocks, even on early return).
+2. If the current time is before `expiresAt`, return the cached data and `true` (cache hit).
+3. Otherwise return `nil` and `false` (cache miss — caller must recompute).
+
+Why a mutex here but not in your earlier single-threaded code? That's the concept to understand.
 
 Later you could use Redis for cache if you want it to survive restarts.
 

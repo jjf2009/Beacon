@@ -48,65 +48,24 @@ Trace: "POST /api/endpoints"  (total: 21ms)
 
 ## Go Implementation
 
-```go
-import (
-    "go.opentelemetry.io/otel"
-    "go.opentelemetry.io/otel/trace"
-)
+Use the `go.opentelemetry.io/otel` packages. Create one package-level tracer (`otel.Tracer("beacon")`).
 
-var tracer = otel.Tracer("beacon")
+**Exercise: instrument a handler.** In a handler, at the top:
 
-func (h *Handler) CreateEndpoint(w http.ResponseWriter, r *http.Request) {
-    ctx, span := tracer.Start(r.Context(), "handler.create_endpoint")
-    defer span.End()
+1. Start a span from the request's context: `ctx, span := tracer.Start(r.Context(), "handler.create_endpoint")`.
+2. `defer span.End()` so the span closes when the handler returns.
+3. Pass that `ctx` (not `r.Context()`) into the service call, so the child span links to this one.
+4. On error, record it on the span (`span.RecordError(err)`) and set the span status to error.
 
-    // pass ctx through all calls
-    endpoint, err := h.service.Create(ctx, req)
-    if err != nil {
-        span.RecordError(err)
-        span.SetStatus(codes.Error, err.Error())
-    }
-}
-
-func (s *Service) Create(ctx context.Context, req CreateRequest) (Endpoint, error) {
-    ctx, span := tracer.Start(ctx, "service.create")
-    defer span.End()
-
-    return s.repo.Insert(ctx, req)
-}
-```
+**Exercise: thread it through the service.** The service's `Create` should take `ctx context.Context` as its **first** argument, start its own child span from that ctx, defer its end, and pass ctx down to the repository. Each layer starts a child span from the ctx it received — that's how the trace tree gets built.
 
 ## Context Propagation Rule
 
-Every function that creates a span must accept `context.Context` as first argument and pass it to child calls.
-
-```go
-// correct
-func (r *Repo) Insert(ctx context.Context, e Endpoint) error
-
-// wrong — trace context lost
-func (r *Repo) Insert(e Endpoint) error
-```
+Every function that creates a span must accept `context.Context` as its **first** argument and pass it to child calls. A method like `Insert(ctx context.Context, e Endpoint)` keeps the trace connected; `Insert(e Endpoint)` (no ctx) breaks the chain — the child span becomes an orphan and the trace is lost. This is why idiomatic Go puts `ctx` first almost everywhere.
 
 ## Exporter Setup
 
-Use Jaeger for local development:
-
-```go
-exporter, _ := jaeger.New(
-    jaeger.WithCollectorEndpoint(
-        jaeger.WithEndpoint("http://localhost:14268/api/traces"),
-    ),
-)
-
-tp := sdktrace.NewTracerProvider(
-    sdktrace.WithBatcher(exporter),
-    sdktrace.WithResource(resource.NewWithAttributes(
-        semconv.ServiceNameKey.String("beacon-api"),
-    )),
-)
-otel.SetTracerProvider(tp)
-```
+Use Jaeger for local development. This is library wiring, not logic — read the OTel + Jaeger exporter docs and set up: a Jaeger exporter pointing at the local collector endpoint, a `TracerProvider` that batches to that exporter and tags itself with a service name, then register it globally with `otel.SetTracerProvider`. The skill here is *reading the library's setup docs and following them* — exactly what you'll do on the job.
 
 ## Docker Compose Addition
 

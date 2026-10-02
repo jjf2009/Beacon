@@ -58,14 +58,9 @@ BRPOP queue 30    ← blocking pop, wait up to 30s for job
 
 ## Job Shape
 
-```go
-type CheckJob struct {
-    EndpointID string    `json:"endpoint_id"`
-    URL        string    `json:"url"`
-    AttemptNum int       `json:"attempt_num"`
-    EnqueuedAt time.Time `json:"enqueued_at"`
-}
-```
+**Exercise: the `CheckJob` struct.** A job is what the scheduler puts on the queue and a worker pulls off. It travels as JSON through Redis, so it needs `json:"..."` tags. Define a struct with: the endpoint ID (string), the URL (string), an attempt number (int — for retries), and an enqueued-at timestamp. You've written tagged structs before — model it on those.
+
+(The Redis commands and docker-compose block below are reference — those are tool syntax to look up, not Go logic to derive.)
 
 ## Architecture
 
