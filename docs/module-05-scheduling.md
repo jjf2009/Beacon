@@ -35,7 +35,7 @@ Endpoint C (interval=10)  → ticker fires every 10s → check C
 
 ## Scheduler Design — write it yourself
 
-### Exercise 1: the two structs
+### Exercise 1: the two structs # done 
 
 Define a `Scheduler` struct with:
 - a field `jobs` that maps an endpoint ID (string) to a pointer-to-Job
@@ -48,12 +48,12 @@ Define a `Job` struct with:
 
 Hints: map type syntax is `map[KeyType]ValueType`. An empty-struct channel is `chan struct{}`.
 
-### Exercise 2: a constructor
+### Exercise 2: a constructor #done
 
 Write a function `New` that takes a `*check.Repository` and returns a `*Scheduler`.
 - Inside, build and return the address of a Scheduler whose `jobs` map is initialized (a nil map can't be written to — you must `make` it) and whose `checkRepo` is the one passed in.
 
-### Exercise 3: AddJob
+### Exercise 3: AddJob #done
 
 Write a method named `AddJob` on `*Scheduler` that takes one `endpoint.Endpoint` parameter (name it `ep`). Line by line, write Go that:
 
