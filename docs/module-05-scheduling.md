@@ -1,6 +1,6 @@
 # Module 5 — Scheduling
 
-## Status: NOT STARTED
+## Status: DONE
 
 ## What You're Building
 

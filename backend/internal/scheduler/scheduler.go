@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/jjf2009/beacon/backend/internal/check"
@@ -10,8 +11,9 @@ import (
 )
 
 type Scheduler struct {
-    jobs map[string]*Job  // endpoint ID → job
-    checkRepo   *check.Repository
+    mu        sync.Mutex
+    jobs      map[string]*Job
+    checkRepo *check.Repository
 }
 
 
@@ -36,7 +38,12 @@ func (s *Scheduler) AddJob(ep endpoint.Endpoint) {
             }
         }
     }()
+    if _, exists := s.jobs[ep.ID]; exists {
+    // Already scheduled
+    return}
+    s.mu.Lock()
     s.jobs[ep.ID] = &Job{endpoint: ep, ticker: ticker, stop: stop}
+    s.mu.Unlock()
       
 }
 
@@ -45,7 +52,9 @@ func (s *Scheduler) RemoveJob(id string){
     value,ok := s.jobs[id]
      if ok {
           close(value.stop)
+          s.mu.Lock()
           delete(s.jobs, id)
+          s.mu.Unlock()
      }else {
           slog.Error("Scheduler does not exist", "id", id)
      }
