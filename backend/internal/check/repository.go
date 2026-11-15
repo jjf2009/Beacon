@@ -3,7 +3,7 @@ package check
 import (
 	"database/sql"
 	"time"
-
+    "errors"
 	"github.com/google/uuid"
 	"github.com/jjf2009/beacon/backend/internal/checker"
 )
@@ -43,6 +43,35 @@ func (r *Repository) ListByEndpoint(endpointID string) ([]Check, error) {
 		LIMIT 20`
 
 	rows, err := r.db.Query(query, endpointID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	checks := []Check{}
+	for rows.Next() {
+		var c Check
+		if err := rows.Scan(&c.ID, &c.EndpointID, &c.Status, &c.StatusCode, &c.ResponseTime, &c.Error, &c.CheckedAt); err != nil {
+			return nil, err
+		}
+		checks = append(checks, c)
+	}
+	return checks, rows.Err()
+}
+
+
+func (r *Repository) GetRecentChecks(endpointID string,limit int) ([]Check, error) {
+	query := `SELECT id::text,endpoint_id::text,status,status_code,response_time,error,checked_at
+	FROM checks
+	WHERE endpoint_id=$1
+	ORDER BY checked_at DESC
+	LIMIT $2`
+
+	if limit <=0 {
+		return nil, errors.New("limit must be greater than zero")
+	}
+
+	rows, err := r.db.Query(query, endpointID,limit)
 	if err != nil {
 		return nil, err
 	}
