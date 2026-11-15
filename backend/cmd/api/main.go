@@ -32,6 +32,7 @@ func main() {
 	endpointRepo := endpoint.NewRepository(db)
 	checkRepo := check.NewRepository(db)
 
+
 	// context that gets cancelled on Ctrl+C — signals both server and worker to stop
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()

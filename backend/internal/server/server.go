@@ -29,6 +29,7 @@ func New(addr string, db *sql.DB) *http.Server {
 
 	// check routes — run a manual check + view history
 	crepo := check.NewRepository(db)
+	csvc := check.NewService(crepo,erepo)
 	router.HandleFunc("POST /api/endpoints/{id}/check", check.RunCheck(esvc, crepo))
 	router.HandleFunc("GET /api/endpoints/{id}/checks", check.ListChecks(crepo))
 

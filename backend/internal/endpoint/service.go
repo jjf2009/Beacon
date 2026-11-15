@@ -1,7 +1,9 @@
 package endpoint
 
+
+
 type Service struct {
-	repo *Repository
+    repo      *Repository
 }
 
 func NewService(repo *Repository) *Service {
@@ -23,3 +25,4 @@ func (s *Service) GetById(id string) (Endpoint, error) {
 func (s *Service) Delete(id string) (Endpoint, error) {
 	return s.repo.Delete(id)
 }
+

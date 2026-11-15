@@ -52,3 +52,4 @@ func ListChecks(repo *Repository) http.HandlerFunc {
 		response.WriteJson(w, http.StatusOK, checks)
 	}
 }
+
