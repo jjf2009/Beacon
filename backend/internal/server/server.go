@@ -31,7 +31,7 @@ func New(addr string, db *sql.DB) *http.Server {
 	crepo := check.NewRepository(db)
 	csvc := check.NewService(crepo,erepo)
 	router.HandleFunc("POST /api/endpoints/{id}/check", check.RunCheck(esvc, crepo))
-	router.HandleFunc("GET /api/endpoints/{id}/checks", check.ListChecks(crepo))
+	router.HandleFunc("GET /api/endpoints/{id}/checks", check.ListChecks(csvc))
 
 	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

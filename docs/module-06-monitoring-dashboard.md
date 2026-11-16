@@ -1,7 +1,8 @@
 # Module 6 — Monitoring Dashboard
 
-## Status: NOT STARTED
-
+## Status: STARTED
+Resume with -c (or command below):
+agy --conversation=e71edd81-0e0f-4336-b4fc-19808a2f9765
 ## What You're Building
 
 Next.js dashboard that shows live monitoring data. First major milestone: Beacon can automatically monitor your existing applications.
