@@ -1,7 +1,6 @@
 # Module 11 — Public Status Page
 
 ## Status: NOT STARTED
-
 ## What You're Building
 
 Public-facing page anyone can view — no login required. Shows current system status. Separate from internal engineering dashboard.

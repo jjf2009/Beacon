@@ -8,6 +8,7 @@ import (
 	"github.com/jjf2009/beacon/backend/internal/check"
 	"github.com/jjf2009/beacon/backend/internal/endpoint"
 	"github.com/jjf2009/beacon/backend/internal/project"
+	"github.com/jjf2009/beacon/backend/internal/stats"
 )
 
 func New(addr string, db *sql.DB) *http.Server {
@@ -29,9 +30,14 @@ func New(addr string, db *sql.DB) *http.Server {
 
 	// check routes — run a manual check + view history
 	crepo := check.NewRepository(db)
-	csvc := check.NewService(crepo,erepo)
+	csvc := check.NewService(crepo, erepo)
 	router.HandleFunc("POST /api/endpoints/{id}/check", check.RunCheck(esvc, crepo))
 	router.HandleFunc("GET /api/endpoints/{id}/checks", check.ListChecks(csvc))
+
+	// stats routes
+	srepo := stats.NewRepository(db)
+	ssvc := stats.NewService(srepo, erepo)
+	router.HandleFunc("GET /api/endpoints/{id}/stats", stats.GetStats(ssvc))
 
 	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
